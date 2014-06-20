@@ -1,27 +1,31 @@
-// Licensed under the MIT license.
-// Copyright 2014 Luís Almeida
-// https://github.com/luis-almeida/unveil
+/**
+ * jQuery Unveil
+ * A very lightweight jQuery plugin to lazy load images
+ * http://luis-almeida.github.com/unveil
+ *
+ * Licensed under the MIT license.
+ * Copyright 2013 Luís Almeida
+ * https://github.com/luis-almeida
+ */
 
 ;(function($) {
 
-  $.fn.unveil = function(opts) {
-
-    opts = opts || {};
+  $.fn.unveil = function(threshold, callback) {
 
     var $w = $(window),
-        $c = opts.container || $w,
-        th = opts.threshold || 0,
-        wh = $w.height(),
+        th = threshold || 0,
         retina = window.devicePixelRatio > 1,
-        attrib = retina ? "data-src-retina" : "data-src",
+        attrib = retina? "data-src-retina" : "data-src",
         images = this,
         loaded;
 
     this.one("unveil", function() {
-      if (opts.custom) return;
-      var $img = $(this), src = $img.attr(attrib);
-      src = src || $img.attr("data-src");
-      if (src) $img.attr("src", src).trigger("unveiled");
+      var source = this.getAttribute(attrib);
+      source = source || this.getAttribute("data-src");
+      if (source) {
+        this.setAttribute("src", source);
+        if (typeof callback === "function") callback.call(this);
+      }
     });
 
     function unveil() {
@@ -30,9 +34,8 @@
         if ($e.is(":hidden")) return;
 
         var wt = $w.scrollTop(),
-            wb = wt + wh,
-            ct = $c !== $w ? wt - $c.offset().top : 0,
-            et = $e.offset().top + ct,
+            wb = wt + $w.height(),
+            et = $e.offset().top,
             eb = et + $e.height();
 
         return eb >= wt - th && et <= wb + th;
@@ -42,24 +45,7 @@
       images = images.not(loaded);
     }
 
-    function resize() {
-      wh = $w.height();
-      unveil();
-    }
-
-    function debounce(fn) {
-      var timer;
-      return function() {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(fn, opts.debounce || 0);
-      };
-    }
-
-    $c.on({
-      "resize.unveil": debounce(resize),
-      "scroll.unveil": debounce(unveil),
-      "lookup.unveil": unveil
-    });
+    $w.on("scroll.unveil resize.unveil lookup.unveil", unveil);
 
     unveil();
 
